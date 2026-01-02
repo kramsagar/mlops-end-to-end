@@ -1,0 +1,50 @@
+name: mlops-local-ci
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+
+    - name: Install system deps
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc
+
+    - name: Install Python deps
+      run: |
+        pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Pull DVC data
+      run: |
+        dvc pull
+
+    - name: Train + Register Model
+      run: |
+        python src/train.py
+
+    - name: Promote Model
+      run: |
+        mlflow models transition-stage \
+          --model-name LinearRegressionModel \
+          --version 1 \
+          --stage Production \
+          --archive-existing-versions
+
+    - name: Upload MLflow Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: mlruns
+        path: mlruns

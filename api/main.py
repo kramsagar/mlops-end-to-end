@@ -1,39 +1,41 @@
+from fastapi import FastAPI
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 import mlflow
 import time
 import logging
-from fastapi import FastAPI
 from pydantic import BaseModel
 
 mlflow.set_tracking_uri("file:/mlruns")
 
 model = mlflow.pyfunc.load_model(
-    model_uri="models:/LinearRegressionModel/Production"
+    "models:/LinearRegressionModel/Production"
 )
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(message)s"
-)
+logging.basicConfig(level=logging.INFO)
 
-app = FastAPI()
+app = FastAPI(
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None
+)
 
 class Input(BaseModel):
     x: float
 
 @app.post("/predict")
-def predict(data: Input):
+def predict(i: Input):
     start = time.time()
-    y_pred = model.predict([[data.x]])[0]
-    latency = time.time() - start
+    y = model.predict([[i.x]])[0]
+    latency = (time.time() - start) * 1000
 
     logging.info({
-        "x": data.x,
-        "prediction": y_pred,
-        "latency_ms": latency * 1000,
-        "model_version": "Production"
+        "x": i.x,
+        "prediction": y,
+        "latency_ms": latency,
+        "model": "LinearRegressionModel:Production"
     })
 
     return {
-        "prediction": y_pred,
-        "latency_ms": latency * 1000
+        "prediction": y,
+        "latency_ms": latency
     }

@@ -4,19 +4,34 @@ services:
   mlflow:
     build:
       context: .
-      dockerfile: docker/Dockerfile.mlflow
+      dockerfile: docker/mlflow.Dockerfile
+    volumes:
+      - mlruns:/mlruns
     ports:
       - "5000:5000"
+
+  train:
+    build:
+      context: .
+      dockerfile: docker/training.Dockerfile
     volumes:
-      - ./mlruns:/mlruns
+      - mlruns:/mlruns
+      - dvcstore:/dvcstore
+    depends_on:
+      - mlflow
+    restart: "no"
 
   api:
     build:
       context: .
-      dockerfile: docker/Dockerfile.api
+      dockerfile: api/Dockerfile
+    volumes:
+      - mlruns:/mlruns
     ports:
       - "8000:8000"
-    volumes:
-      - ./mlruns:/mlruns
     depends_on:
       - mlflow
+
+volumes:
+  mlruns:
+  dvcstore:
